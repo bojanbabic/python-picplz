@@ -4,6 +4,7 @@ import mimetypes
 from cStringIO import StringIO
 import urllib
 import urllib2
+import uuid
 
 class MultiPartForm(object):
     """Accumulate the data to be used when posting a form."""
@@ -11,7 +12,7 @@ class MultiPartForm(object):
     def __init__(self):
         self.form_fields = []
         self.files = []
-        self.boundary = mimetools.choose_boundary()
+        self.boundary = "instaright-%s" % uuid.uuid4()# mimetools.choose_boundary()
         return
     
     def get_content_type(self):
@@ -52,7 +53,7 @@ class MultiPartForm(object):
         # Add the files to upload
         parts.extend(
             [ part_boundary,
-              'Content-Disposition: file; name="%s"; filename="%s"' % \
+              'Content-Disposition: attachment; name="%s"; filename="%s"' % \
                  (field_name, filename),
               'Content-Type: %s' % content_type,
               '',

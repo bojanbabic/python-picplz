@@ -1,10 +1,11 @@
-from cStringIO import StringIO
+from StringIO import StringIO
 from picplz.errors import PicplzError
 from picplz.helpers import MultiPartForm
 from picplz.objects import PicplzUser, PicplzPlace, PicplzComment, Pic, \
     PicplzCity, PicplzFilter, UploadPic, PicplzLike
 from picplz.utils import to_unicode_or_bust
 from picplz.authentication import PicplzAuthenticator,PicplzOauthToken
+from google.appengine.api import urlfetch
 import cgi
 import simplejson
 import urllib
@@ -12,8 +13,10 @@ import urllib2
 import httplib2
 import logging
 from picplz import LOG_NAME
+import uuid
 
 log = logging.getLogger(LOG_NAME)
+import sys, os
 
 class PicplzAPI():
     """ picplz API """
@@ -185,6 +188,38 @@ class PicplzAPI():
 
         return pic
     
+    def upload_pic_url(self,oauth_token, upload_pic_url):
+        
+        #parameters = upload_pic.get_parameters()
+        parameters= {}
+        #parameters['suppress_sharing'] = 1
+        
+        form = MultiPartForm()
+        sb=StringIO(urllib2.urlopen(upload_pic_url).read())
+        form.add_field('oauth_token', oauth_token)
+        #form.add_field('oauth_token', self.authenticator.access_token.to_string())
+        for key in parameters.keys():
+            form.add_field(key,parameters[key])
+        
+        # Add a fake file
+        form.add_file('file', '%s' % uuid.uuid4(), 
+                      fileHandle=sb)
+    
+        # Build the request
+        request = urllib2.Request(self.upload_endpoint)
+        body = str(form)
+        logging.info('body: %s' %body)
+        request.add_header('Content-type', form.get_content_type())
+        request.add_header('Content-length', len(body))
+        request.add_data(body)
+    
+        response = urllib2.urlopen(request)
+        response_text = response.read()
+        if self.print_json:
+            print response_text
+        self.__check_for_picplz_error__(response_text)
+        return response_text
+        
     def upload_pic(self, upload_pic):
         
         if not self.is_authenticated:
